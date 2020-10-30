@@ -8,7 +8,7 @@
 Higrometro sh;
 FotoDiodo sl;
 SDHT11 sht;
-DHT dht(sht.getPinActuador(), DHTTYPE);
+DHT dht(sht.getPinLectura(), DHTTYPE);
 
 void setup() {
   
