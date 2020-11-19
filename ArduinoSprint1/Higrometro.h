@@ -14,7 +14,7 @@ class Higrometro
              pinActuador = 27;
              pinLectura = 34;
              voltajeHumedadLeido = 0;
-             humbralAlerta = 50;
+             humbralAlerta = 30;
           }
           
           Higrometro(int valorSecoP, int valorHumedoP, int pinActuadorP, int pinLecturaP, int humbralAlertaP){
@@ -77,7 +77,7 @@ class Higrometro
             voltajeHumedadLeido = analogRead(pinLectura);
             
             humedad = 100*valorSeco/(valorSeco-valorHumedo)-voltajeHumedadLeido*100/(valorSeco-valorHumedo);
-            comprobarHumedad(humedad);
+            //comprobarHumedad(humedad);
             
             return humedad;
             
@@ -85,10 +85,19 @@ class Higrometro
 
           void comprobarHumedad(int16_t humedad){
 
-            if(humedad>50){
+            if(humedad>humbralAlerta){
               digitalWrite(pinActuador, HIGH);
             }else{
               digitalWrite(pinActuador, LOW);
             }
          }
+          void actuarBombaDeRiego(boolean actuadorBomba){
+
+            if(actuadorBomba){
+              digitalWrite(pinActuador, HIGH);
+            }else{
+              digitalWrite(pinActuador, LOW);
+            }
+         }
+         
 } ;

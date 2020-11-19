@@ -10,7 +10,7 @@ class FotoDiodo
              pinActuador = 12;
              pinLectura = 32;
              voltajeLuminosidadLeida = 0;
-             humbralAlerta = 600;
+             humbralAlerta = 30;
           }
           
           FotoDiodo(int pinActuadorP, int pinLecturaP, int humbralAlertaP){
@@ -51,32 +51,33 @@ class FotoDiodo
            
           //Metodos
          int16_t leerLuminosidad(){
-            int16_t luminosidad = analogRead(pinLectura);
-            //voltajeLuminosidadLeida = analogRead(pinLectura);
             
-            //luminosidad = 100*valorSeco/(valorSeco-valorHumedo)-voltajeHumedadLeido*100/(valorSeco-valorHumedo);
-            comprobarLuminosidad(luminosidad);
+            int16_t luminosidad =-1;
+            voltajeLuminosidadLeida = analogRead(pinLectura);
+            
+            luminosidad = 100 - (100*79/(79-4096)-voltajeLuminosidadLeida*100/(79-4096));
+            //comprobarLuminosidad(luminosidad);
             
             return luminosidad;
             
           }
 
-          void comprobarLuminosidad(int16_t luminosidad){
+         /* void comprobarLuminosidad(int16_t luminosidad){
 
             if(luminosidad < humbralAlerta){
               digitalWrite(pinActuador, HIGH);
             }else{
               digitalWrite(pinActuador, LOW);
             }
-         }
+         }*/
 
         String estadoLuminosidad(int16_t luminosidad){
           String estadoLuminosidad = "Oscuridad total";
-          if(luminosidad < 600){
+          if(luminosidad >= 85){
             estadoLuminosidad = "Alta luminosidad";
-           } else if(luminosidad > 600 && luminosidad < 2400){
+           } else if(luminosidad < 85 && luminosidad > 50){
               estadoLuminosidad = "Luminosidad moderada";
-           } else if(luminosidad > 2400 && luminosidad < 3600){
+           } else if(luminosidad < 50 && luminosidad >30){
              estadoLuminosidad = "Luminosidad baja";
            }else{
              estadoLuminosidad = "Luminosidad muy baja";
@@ -84,4 +85,14 @@ class FotoDiodo
 
            return estadoLuminosidad;
        }
+
+     void actuarSobreLuces(boolean estadoLuces){
+            
+            if(estadoLuces){
+              digitalWrite(pinActuador, HIGH);
+            }else{
+              digitalWrite(pinActuador, LOW);
+              Serial.print("Luces apagados");
+            }
+    }
 } ;

@@ -7,8 +7,8 @@ class  SDHT11
      public: 
           //Constructores
           SDHT11(){
-             pinActuador = 25;
-             pinLectura = 26;
+             pinActuador = 26;
+             pinLectura = 25;
              voltajeHumedadLeido = 0;
              humbralAlerta = 25.00;
           }
@@ -54,6 +54,16 @@ class  SDHT11
           void comprobarTemperatura(float temperatura){
 
             if(temperatura>humbralAlerta){
+              digitalWrite(pinActuador, HIGH);
+            }else{
+              digitalWrite(pinActuador, LOW);
+            }
+         }
+
+
+          void actuarSobreVentilacion(boolean estadoVentiladores){
+
+            if(estadoVentiladores){
               digitalWrite(pinActuador, HIGH);
             }else{
               digitalWrite(pinActuador, LOW);
