@@ -15,13 +15,15 @@ char ssid[] = "MiFibra-397F";        // your network SSID (name)
 char pass[] = "oXr6gkNe";    // your network password (use for WPA, or use as key for WEP)
 
 //Configuración MQTT
-const char broker[]    = "mqtt.eclipse.org";
+const char broker[]    = "broker.hivemq.com";
 int        port        = 1883;
 const char willTopic[] = "infinity/senyal/will";
 const char lucesTopic[]   = "infinity/senyal/luces";
 const char ventiladoresTopic[]   = "infinity/senyal/ventiladores";
 const char riegoTopic[]   = "infinity/senyal/riego";
 const char datosTopic[]  = "infinity/senyal/lecturaDatos";
+
+//PinActuadores
 int pinActuadorLucesTapa = 12;
 
 //Declaración objetos
@@ -33,7 +35,7 @@ DHT dht(sht.getPinLectura(), DHTTYPE);
 WiFiClient wifiClient;
 MqttClient mqttClient(wifiClient);
 
-
+ 
 void setup() {
   
   Serial.begin(115200);
@@ -103,7 +105,7 @@ void loop() {
   
   int qos = 1;
   bool dup = false;
-  String payload = "9NrD8wx3QkQy9iNLV0iJ";
+  String payload = "";
   mqttClient.poll();
    
   int16_t humedad = sh.tomarLectura();
@@ -133,7 +135,7 @@ void loop() {
               Serial.println(" Cº");
               sht.comprobarTemperatura(temperaturaAmbiente);
              
-              payload += "-";
+              //payload += "-";
               payload += String(humedad);
               payload += "-";
               payload += String(luminosidad);
