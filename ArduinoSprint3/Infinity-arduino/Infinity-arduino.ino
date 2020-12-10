@@ -7,8 +7,7 @@
 #include <ArduinoMqttClient.h>
 #include <WiFi.h>
 
-#define DHTTYPENV2 DHT22
-#define DHTTYPENV1 DHT11
+#define DHTTYPE DHT22
 
 
 //Configuración wifi
@@ -20,7 +19,7 @@ const char broker[]    = "broker.hivemq.com";
 int        port        = 1883;
 const char willTopic[] = "infinity/senyal/will";
 const char lucesTopic[]   = "infinity/senyal/luces";
-const char luzPuertaTopic[]   = "infinity/senyal/luzPuerta";
+const char luzPuertaTopic[]   = "infinity/senyal/luzPuerta/POWER";
 /*const char ventiladoresTopic[]   = "infinity/senyal/ventiladores";
 const char riegoTopic[]   = "infinity/senyal/riego";*/
 const char datosTopic[]  = "infinity/senyal/lecturaDatos";
@@ -32,12 +31,10 @@ int pinActuadorLucesPuerta = 13;
 //Declaración objetos
 Higrometro sh;
 FotoResistencia sl;
-SDHT shtnv1(0,33,25);
-SDHT shtnv2;
+SDHT sht;
 Actuador lucesTapa(pinActuadorLucesTapa);
 Actuador lucesPuerta(pinActuadorLucesPuerta);
-DHT dhtnv1(shtnv1.getPinLectura(), DHTTYPENV1);
-DHT dhtnv2(shtnv2.getPinLectura(), DHTTYPENV2);
+DHT dht(sht.getPinLectura(), DHTTYPE);
 WiFiClient wifiClient;
 MqttClient mqttClient(wifiClient);
 
@@ -45,14 +42,13 @@ MqttClient mqttClient(wifiClient);
 void setup() {
   
   Serial.begin(115200);
-  dhtnv1.begin();
-  dhtnv2.begin();
+  dht.begin();
 
   //Configuración pines de los actuadores
   pinMode(sh.getPinActuador(), OUTPUT);
   pinMode(lucesTapa.getPinActuador(), OUTPUT);
+  pinMode(sht.getPinActuador(),OUTPUT);
   pinMode(lucesPuerta.getPinActuador(), OUTPUT);
-  pinMode(shtnv2.getPinActuador(),OUTPUT);
 
 
   //Wifi
@@ -119,17 +115,11 @@ void loop() {
    
   int16_t humedad = sh.tomarLectura();
   int16_t luminosidad = sl.tomarLectura();
-
-  float humedadAmbienteNV1 = leerHumedadAmbiente(dhtnv1);
-  float humedadAmbienteNV2 = leerHumedadAmbiente(dhtnv2);
-  float mediaHumedadAmbiente = calcularMedia(humedadAmbienteNV1, humedadAmbienteNV2);
-  
-  float temperaturaAmbienteNV1 = leerTemperaturaAmbiente(dhtnv1);
-  float temperaturaAmbienteNV2 = leerTemperaturaAmbiente(dhtnv2);
-  float mediaTemperaturaAmbiente = calcularMedia(temperaturaAmbienteNV1,temperaturaAmbienteNV2 );
-  
+  float humedadAmbiente = leerHumedadAmbiente();
+  float temperaturaAmbiente = leerTemperaturaAmbiente();
 
 
+            
               Serial.println("<----- Humedad ----->");
               Serial.print("Humedad en la unidad 1 (%): ");
               //Serial.println(sh.getVoltajeHumedadLeido());
@@ -139,54 +129,32 @@ void loop() {
 
               
               Serial.print("Humedad ambiente en el nivel 2(%):");
-              Serial.print(humedadAmbienteNV2);
+              Serial.print(humedadAmbiente);
               Serial.println("%");
-              Serial.print("Humedad ambiente en el nivel 1(%):");
-              Serial.print(humedadAmbienteNV1);
-              Serial.println("%");
-
-              Serial.print("Humedad ambiente en la maquina(%):");
-              Serial.print(mediaHumedadAmbiente);
-              Serial.println("%");
-              
-
               
               Serial.println("<----- Luminosidad ----->");
               Serial.print("Valor Luminosidad leido: ");
               Serial.print(luminosidad);
               Serial.println(" Estado luminosidad "+sl.estadoLuminosidad(luminosidad));
-
-              
              
+            
               Serial.println("<----- Temperatura (Cº) ----->");            
               Serial.print("Valor temperatura leida en el Nivel 2: ");
-              Serial.print(temperaturaAmbienteNV2);
+              Serial.print(temperaturaAmbiente);
               Serial.println(" Cº");
 
-              Serial.print("Valor temperatura leida en el Nivel 1: ");
-              Serial.print(temperaturaAmbienteNV1);
-              Serial.println(" Cº");
-
-              Serial.print("Valor temperatura ambiente: ");
-              Serial.print(mediaTemperaturaAmbiente);
-              Serial.println(" Cº");
-              shtnv2.comprobarTemperatura(mediaTemperaturaAmbiente);
+              Serial.println(" ");
+              Serial.println(" ");
+              sht.comprobarTemperatura(temperaturaAmbiente);
              
               payload += "-";
               payload += String(humedad);
               payload += "-";
               payload += String(luminosidad);
               payload += "-";
-              payload += String(humedadAmbienteNV2,2);
+              payload += String(humedadAmbiente,2);
               payload += "-";
-              payload += String(temperaturaAmbienteNV2,2);
-              payload += "-";
-              payload += String(humedadAmbienteNV1,2);
-              payload += "-";
-              payload += String(temperaturaAmbienteNV1,2);
-              payload += "-";
-              payload += String(mediaTemperaturaAmbiente,2);
-              
+              payload += String(temperaturaAmbiente,2);
               
               mqttClient.beginMessage(datosTopic, payload.length(), retained, qos, dup);
               mqttClient.print(payload);
@@ -198,7 +166,7 @@ void loop() {
   
 }
 
- float leerHumedadAmbiente(DHT dht){
+ float leerHumedadAmbiente(){
       float humedadAmbiente = dht.readHumidity();
 
       if (isnan(humedadAmbiente)) {
@@ -210,21 +178,16 @@ void loop() {
             
 }
           
-float leerTemperaturaAmbiente(DHT dht){
+float leerTemperaturaAmbiente(){
      float temperatura = dht.readTemperature();
 
     if (isnan(temperatura)) {
        Serial.println(F("Error al leer temperatura!"));
-       return -360;
+       return -1;
     }else{
       return temperatura;
     }
             
-}
-
-float calcularMedia(float medida1, float medida2){
-  float media = (medida1+medida2)/2;
-  return media;
 }
 
 
@@ -256,10 +219,10 @@ void onMqttMessage(int messageSize) {
   }else if(cadena == "Superior ON"){
     Serial.print("Encendiendo luces de la parte superior...");
     lucesTapa.cambiarEstadoActuador(false); 
-  }else if(cadena == "Puerta ON"){
+  }else if(cadena == "ON"){
     Serial.print("Encendiendo luces de la puerta...");
     lucesPuerta.cambiarEstadoActuador(true); 
-  }else if(cadena == "Puerta OFF"){
+  }else if(cadena == "OFF"){
     Serial.print("Apagando luces de la puerta...");
     lucesPuerta.cambiarEstadoActuador(false);
     
