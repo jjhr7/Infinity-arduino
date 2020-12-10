@@ -8,7 +8,7 @@
 #include <WiFi.h>
 
 #define DHTTYPE DHT22
-
+#define DHTTYPE11 DHT11
 
 //Configuración wifi
 char ssid[] = "MiFibra-397F";        // your network SSID (name)
@@ -32,9 +32,11 @@ int pinActuadorLucesPuerta = 13;
 Higrometro sh;
 FotoResistencia sl;
 SDHT sht;
+SDHT shtnv1(0,33,25);
 Actuador lucesTapa(pinActuadorLucesTapa);
 Actuador lucesPuerta(pinActuadorLucesPuerta);
 DHT dht(sht.getPinLectura(), DHTTYPE);
+DHT dhtnv1(shtnv1.getPinLectura(),DHTTYPE11);
 WiFiClient wifiClient;
 MqttClient mqttClient(wifiClient);
 
@@ -43,7 +45,7 @@ void setup() {
   
   Serial.begin(115200);
   dht.begin();
-
+  dhtnv1.begin();
   //Configuración pines de los actuadores
   pinMode(sh.getPinActuador(), OUTPUT);
   pinMode(lucesTapa.getPinActuador(), OUTPUT);
@@ -115,9 +117,15 @@ void loop() {
    
   int16_t humedad = sh.tomarLectura();
   int16_t luminosidad = sl.tomarLectura();
+  
   float humedadAmbiente = leerHumedadAmbiente();
+  float humedadAmbienteN1 = leerHumedadAmbienteN1();
+  float mediaHumedadaAmbiente = calcularMedia(humedadAmbiente,humedadAmbienteN1);
+  
   float temperaturaAmbiente = leerTemperaturaAmbiente();
-
+  float temperaturaAmbienteN1 = leerTemperaturaAmbienteN1();
+  float mediaTemperaturaAmbiente = calcularMedia(temperaturaAmbiente,temperaturaAmbienteN1);
+  
 
             
               Serial.println("<----- Humedad ----->");
@@ -128,8 +136,16 @@ void loop() {
               Serial.println("%");
 
               
+              Serial.print("Humedad ambiente en el nivel 1(%):");
+              Serial.print(humedadAmbienteN1);
+              Serial.println("%");
+              
               Serial.print("Humedad ambiente en el nivel 2(%):");
               Serial.print(humedadAmbiente);
+              Serial.println("%");
+
+              Serial.print("Humedad ambiente en la maquina:");
+              Serial.print(mediaHumedadaAmbiente);
               Serial.println("%");
               
               Serial.println("<----- Luminosidad ----->");
@@ -138,9 +154,17 @@ void loop() {
               Serial.println(" Estado luminosidad "+sl.estadoLuminosidad(luminosidad));
              
             
-              Serial.println("<----- Temperatura (Cº) ----->");            
+              Serial.println("<----- Temperatura (Cº) ----->");    
+              Serial.print("Valor temperatura leida en el Nivel 1: ");
+              Serial.print(temperaturaAmbienteN1);
+              Serial.println(" Cº");     
+                
               Serial.print("Valor temperatura leida en el Nivel 2: ");
               Serial.print(temperaturaAmbiente);
+              Serial.println(" Cº");
+
+              Serial.print("Valor temperatura ambiente en la maquina: ");
+              Serial.print(mediaTemperaturaAmbiente);
               Serial.println(" Cº");
 
               Serial.println(" ");
@@ -152,9 +176,17 @@ void loop() {
               payload += "-";
               payload += String(luminosidad);
               payload += "-";
+              payload += String(humedadAmbienteN1,2);
+              payload += "-";
               payload += String(humedadAmbiente,2);
               payload += "-";
+              payload += String(mediaHumedadaAmbiente,2);
+              payload += "-";
+              payload += String(temperaturaAmbienteN1,2);
+              payload += "-";
               payload += String(temperaturaAmbiente,2);
+              payload += "-";
+              payload += String(mediaTemperaturaAmbiente,2);
               
               mqttClient.beginMessage(datosTopic, payload.length(), retained, qos, dup);
               mqttClient.print(payload);
@@ -187,6 +219,36 @@ float leerTemperaturaAmbiente(){
     }else{
       return temperatura;
     }
+            
+}
+
+ float leerHumedadAmbienteN1(){
+      float humedadAmbiente = dhtnv1.readHumidity();
+
+      if (isnan(humedadAmbiente)) {
+          Serial.println(F("Error al leer con el sensor DHT11humedad!"));
+             return -1;
+      }else{
+        return humedadAmbiente;
+      }
+            
+}
+          
+float leerTemperaturaAmbienteN1(){
+     float temperatura = dhtnv1.readTemperature();
+
+    if (isnan(temperatura)) {
+       Serial.println(F("Error al leer con el sensor DHT11 temperatura!"));
+       return -1;
+    }else{
+      return temperatura;
+    }
+            
+}
+
+float calcularMedia(float medida1, float medida2){
+     float media = (medida1+medida2)/2;
+     return media;
             
 }
 
