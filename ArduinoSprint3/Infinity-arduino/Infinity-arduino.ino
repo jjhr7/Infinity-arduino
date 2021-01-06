@@ -4,25 +4,28 @@
 #include "SDHT.h"
 #include "DHT.h"
 #include "Actuador.h"
+#include "Ultrasonico.h"
 #include <ArduinoMqttClient.h>
 #include <WiFi.h>
+
 
 #define DHTTYPE DHT22
 #define DHTTYPE11 DHT11
 
 //Configuración wifi
-char ssid[] = "MiFibra-397F";        // your network SSID (name)
-char pass[] = "oXr6gkNe";    // your network password (use for WPA, or use as key for WEP)
+/*char ssid[] = "TP-LINK_9942";        // your network SSID (name)
+char pass[] = "58912485";    // your network password (use for WPA, or use as key for WEP)*/
+char ssid[] = "Onefy_RENGAR";        // your network SSID (name)
+char pass[] = "04101973";    // your network password (use for WPA, or use as key for WEP)
 
 //Configuración MQTT
 const char broker[]    = "broker.hivemq.com";
 int        port        = 1883;
 const char willTopic[] = "infinity/senyal/will";
-const char lucesTopic[]   = "infinity/senyal/luces";
-const char luzPuertaTopic[]   = "infinity/senyal/luzPuerta/POWER";
-/*const char ventiladoresTopic[]   = "infinity/senyal/ventiladores";
-const char riegoTopic[]   = "infinity/senyal/riego";*/
+const char operacionesTopic[]   = "infinity/senyal/operaciones";
 const char datosTopic[]  = "infinity/senyal/lecturaDatos";
+const char datosTopic1[]  = "infinity/senyal/lecturaDatos1";
+const char datosTopic2[]  = "infinity/senyal/lecturaDatos2";
 
 //PinActuadores
 int pinActuadorLucesTapa = 12;
@@ -35,6 +38,7 @@ SDHT sht;
 SDHT shtnv1(0,33,25);
 Actuador lucesTapa(pinActuadorLucesTapa);
 Actuador lucesPuerta(pinActuadorLucesPuerta);
+Ultrasonico spres;
 DHT dht(sht.getPinLectura(), DHTTYPE);
 DHT dhtnv1(shtnv1.getPinLectura(),DHTTYPE11);
 WiFiClient wifiClient;
@@ -52,6 +56,10 @@ void setup() {
   pinMode(sht.getPinActuador(),OUTPUT);
   pinMode(lucesPuerta.getPinActuador(), OUTPUT);
 
+  //Presencia
+  pinMode(spres.getTriggerPin(), OUTPUT);
+  pinMode(spres.getPinEcho(), INPUT);
+
 
   //Wifi
   Serial.print("Intentando conectar a la red con el SSID: ");
@@ -66,6 +74,8 @@ void setup() {
   Serial.println("You're connected to the network");
   Serial.println();
 
+
+  //MQTT
   String willPayload = "oh no!";
   bool willRetain = true;
   int willQos = 1;
@@ -99,10 +109,7 @@ void setup() {
   // the the library supports subscribing at QoS 0, 1, or 2
   int subscribeQos = 1;
 
-  mqttClient.subscribe(lucesTopic, subscribeQos);
-  mqttClient.subscribe(luzPuertaTopic, subscribeQos);
-  /*mqttClient.subscribe(ventiladoresTopic, subscribeQos);
-  mqttClient.subscribe(riegoTopic, subscribeQos);*/
+  mqttClient.subscribe(operacionesTopic, subscribeQos);
   
 }
 
@@ -113,6 +120,8 @@ void loop() {
   int qos = 1;
   bool dup = false;
   String payload = "i7oLSgyX0kx6c75oMKBP";
+  String payload1 = "i7oLSgyX0kx6c75oMKBP";
+  String payload2 = "i7oLSgyX0kx6c75oMKBP";
   mqttClient.poll();
    
   int16_t humedad = sh.tomarLectura();
@@ -125,6 +134,8 @@ void loop() {
   float temperaturaAmbiente = leerTemperaturaAmbiente();
   float temperaturaAmbienteN1 = leerTemperaturaAmbienteN1();
   float mediaTemperaturaAmbiente = calcularMedia(temperaturaAmbiente,temperaturaAmbienteN1);
+
+  int distanciaLeida = spres.distancia();
   
 
             
@@ -132,7 +143,9 @@ void loop() {
               Serial.print("Humedad en la unidad 1 (%): ");
               //Serial.println(sh.getVoltajeHumedadLeido());
               Serial.print(humedad);
-              sh.comprobarHumedad(humedad);
+              if(spres.hayPresencia()){
+                sh.comprobarHumedad(humedad);
+               }
               Serial.println("%");
 
               
@@ -168,29 +181,47 @@ void loop() {
               Serial.println(" Cº");
 
               Serial.println(" ");
-              Serial.println(" ");
-              sht.comprobarTemperatura(temperaturaAmbiente);
              
+              sht.comprobarTemperatura(temperaturaAmbiente);
+
+              Serial.println("<----- Distancia  ----->");
+              Serial.println(distanciaLeida);
+              Serial.println(" ");
+              Serial.println(" ");
+              
               payload += "-";
               payload += String(humedad);
               payload += "-";
               payload += String(luminosidad);
               payload += "-";
-              payload += String(humedadAmbienteN1,2);
-              payload += "-";
-              payload += String(humedadAmbiente,2);
-              payload += "-";
               payload += String(mediaHumedadaAmbiente,2);
               payload += "-";
-              payload += String(temperaturaAmbienteN1,2);
-              payload += "-";
-              payload += String(temperaturaAmbiente,2);
-              payload += "-";
               payload += String(mediaTemperaturaAmbiente,2);
+              
+              
+              
+              payload1 += "-";
+              payload1 += String(humedadAmbienteN1,2);
+              payload1 += "-";
+              payload1 += String(temperaturaAmbienteN1,2);
+
+              payload2 += "-";
+              payload2 += String(humedadAmbiente,2);              
+              payload2 += "-";
+              payload2 += String(temperaturaAmbiente,2);
               
               mqttClient.beginMessage(datosTopic, payload.length(), retained, qos, dup);
               mqttClient.print(payload);
               mqttClient.endMessage();
+
+              mqttClient.beginMessage(datosTopic1, payload1.length(), retained, qos, dup);
+              mqttClient.print(payload1);
+              mqttClient.endMessage();
+
+              mqttClient.beginMessage(datosTopic2, payload2.length(), retained, qos, dup);
+              mqttClient.print(payload2);
+              mqttClient.endMessage();
+              
               delay(2500);
             
 
@@ -254,7 +285,15 @@ float calcularMedia(float medida1, float medida2){
 
 
 void onMqttMessage(int messageSize) {
-  String cadena = "";
+  String mensajeLeido = "";
+  char sz[] = "12345678";
+  char buf[sizeof(sz)];
+  String delimitador = "-";
+  int operacion = 0;
+  String valorOperacion = "";
+  int nOperacion = 0;
+
+  
   // we received a message, print out the topic and contents
   Serial.print("Received a message with topic '");
   Serial.print(mqttClient.messageTopic());
@@ -270,25 +309,72 @@ void onMqttMessage(int messageSize) {
 
   // use the Stream interface to print the contents
   while (mqttClient.available()) {
-    cadena += (char)mqttClient.read();
+    mensajeLeido += (char)mqttClient.read();
   }
-  Serial.println(cadena);
+  
+  //Serial.println(mensajeLeido);
+  
+    mensajeLeido.toCharArray(buf, sizeof(buf));
+    char *p = buf;
+    char *str;
+    while ((str = strtok_r(p, "-", &p)) != NULL) // delimiter is the semicolon
+      if(nOperacion == 0){
+        operacion = atoi(str);
+        nOperacion++;
+      }else if(nOperacion == 1){
+        valorOperacion = str;
+      }
+      
+  
 
-  if(cadena == "Superior OFF"){
+  switch (operacion)  {
+    case 1:
+            Serial.println("Operar con las luces de la parte superior");
+             if(valorOperacion == "OFF"){
+              Serial.print("Apagando luces de la parte superior...");
+              lucesTapa.cambiarEstadoActuador(true);
+              
+            }else if(valorOperacion == "ON"){
+              Serial.print("Encendiendo luces de la parte superior...");
+              lucesTapa.cambiarEstadoActuador(false); 
+            }
+        break;
+
+    case 2:
+          Serial.println("Operar con las luces de una de las puertas");
+           if(valorOperacion == "ON"){
+            Serial.print("Encendiendo luces de la puerta...");
+            lucesPuerta.cambiarEstadoActuador(true); 
+          }else if(valorOperacion == "OFF"){
+            Serial.print("Apagando luces de la puerta...");
+            lucesPuerta.cambiarEstadoActuador(false);  
+          }
+        break;
+        
+      case 3:
+          Serial.println("Operar cambiando el humbral de temperatura a la que se activan los ventiladores");
+           sht.setHumbralAlerta(valorOperacion.toFloat());
+           Serial.println(sht.getHumbralAlerta());
+        break;
+    default:
+        Serial.println("Operación desconocida");
+  }
+
+  /*if(mensajeLeido == "Superior OFF"){
     Serial.print("Apagando luces de la parte superior...");
     lucesTapa.cambiarEstadoActuador(true);
     
-  }else if(cadena == "Superior ON"){
+  }else if(mensajeLeido == "Superior ON"){
     Serial.print("Encendiendo luces de la parte superior...");
     lucesTapa.cambiarEstadoActuador(false); 
-  }else if(cadena == "ON"){
+  }else if(mensajeLeido == "ON"){
     Serial.print("Encendiendo luces de la puerta...");
     lucesPuerta.cambiarEstadoActuador(true); 
-  }else if(cadena == "OFF"){
+  }else if(mensajeLeido == "OFF"){
     Serial.print("Apagando luces de la puerta...");
     lucesPuerta.cambiarEstadoActuador(false);
     
-  }
+  }*/
   
   Serial.println();
   Serial.println();
