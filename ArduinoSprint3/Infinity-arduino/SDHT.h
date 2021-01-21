@@ -7,7 +7,7 @@ class  SDHT : public Sensor
           SDHT()
           : Sensor(25){
              pinActuador = 26;
-             humbralAlerta = 25.00;
+             humbralAlerta = 16.00;
           }
           
           SDHT( int pinActuadorP, int pinLecturaP, int humbralAlertaP)

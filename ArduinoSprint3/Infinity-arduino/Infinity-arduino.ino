@@ -7,44 +7,69 @@
 #include "Ultrasonico.h"
 #include <ArduinoMqttClient.h>
 #include <WiFi.h>
-
+#include <FirebaseESP32.h>
 
 #define DHTTYPE DHT22
 #define DHTTYPE11 DHT11
 
+#define FIREBASE_HOST "https://infinity-crop-cc8b9.firebaseio.com"
+#define FIREBASE_AUTH "rnkvZtImIx3hSjM915QwP7Yr5lJbQlWYwuAE53Zk"
+
 //Configuración wifi
-/*char ssid[] = "TP-LINK_9942";        // your network SSID (name)
-char pass[] = "58912485";    // your network password (use for WPA, or use as key for WEP)*/
-char ssid[] = "Onefy_RENGAR";        // your network SSID (name)
-char pass[] = "04101973";    // your network password (use for WPA, or use as key for WEP)
+/*char ssid[] = "MiFibra-397F";        // your network SSID (name)
+char pass[] = "oXr6gkNe";    // your network password (use for WPA, or use as key for WEP)*/
+/*char ssid[] = "GUCCI NOTE";        // your network SSID (name)
+char pass[] = "12345678";    // your network password (use for WPA, or use as key for WEP)*/
+char ssid[] = "GTI-2020-2A-2-2";        // your network SSID (name)
+char pass[] = "58912485";    // your network password (use for WPA, or use as key for WEP)
+
+//Define FirebaseESP32 data object and variables
+FirebaseData fbdo;
+
+
+
+String machineID = "/infinitycrop18012021";
+String pathG = "/Mediciones general";
+String path1 = "/Mediciones nivel 1";
+String path2 = "/Mediciones nivel 2";
+
 
 //Configuración MQTT
 const char broker[]    = "broker.hivemq.com";
 int        port        = 1883;
 const char willTopic[] = "infinity/senyal/will";
 const char operacionesTopic[]   = "infinity/senyal/operaciones";
-const char datosTopic[]  = "infinity/senyal/lecturaDatos";
-const char datosTopic1[]  = "infinity/senyal/lecturaDatos1";
-const char datosTopic2[]  = "infinity/senyal/lecturaDatos2";
+const char debugtopic[]  = "infinity/senyal/debug";
 
 //PinActuadores
 int pinActuadorLucesTapa = 12;
 int pinActuadorLucesPuerta = 13;
+int pinActuadorLuzP1 = 14;
+int pinActuadorLuzP2 = 22;
+int pinActuadorLuzP3 = 23;
 
 //Declaración objetos
 Higrometro sh;
 FotoResistencia sl;
 SDHT sht;
-SDHT shtnv1(0,33,25);
+SDHT shtnv1(0,33,16);
+Ultrasonico spres;
+
 Actuador lucesTapa(pinActuadorLucesTapa);
 Actuador lucesPuerta(pinActuadorLucesPuerta);
-Ultrasonico spres;
+
+Actuador luzP1(pinActuadorLuzP1);
+Actuador luzP2(pinActuadorLuzP2);
+Actuador luzP3(pinActuadorLuzP3);
+
 DHT dht(sht.getPinLectura(), DHTTYPE);
 DHT dhtnv1(shtnv1.getPinLectura(),DHTTYPE11);
 WiFiClient wifiClient;
 MqttClient mqttClient(wifiClient);
 
- 
+
+void printResult(FirebaseData &data);
+
 void setup() {
   
   Serial.begin(115200);
@@ -55,11 +80,13 @@ void setup() {
   pinMode(lucesTapa.getPinActuador(), OUTPUT);
   pinMode(sht.getPinActuador(),OUTPUT);
   pinMode(lucesPuerta.getPinActuador(), OUTPUT);
+  pinMode(luzP1.getPinActuador(), OUTPUT);
+  pinMode(luzP2.getPinActuador(), OUTPUT);
+  pinMode(luzP3.getPinActuador(), OUTPUT);
 
   //Presencia
   pinMode(spres.getTriggerPin(), OUTPUT);
   pinMode(spres.getPinEcho(), INPUT);
-
 
   //Wifi
   Serial.print("Intentando conectar a la red con el SSID: ");
@@ -74,9 +101,23 @@ void setup() {
   Serial.println("You're connected to the network");
   Serial.println();
 
+  //Firebase ESP32
+  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH);
+  Firebase.reconnectWiFi(true);
 
+  //Set database read timeout to 1 minute (max 15 minutes)
+  Firebase.setReadTimeout(fbdo, 1000 * 60);
+  //tiny, small, medium, large and unlimited.
+  //Size and its write timeout e.g. tiny (1s), small (10s), medium (30s) and large (60s).
+  Firebase.setwriteSizeLimit(fbdo, "tiny");
+
+  //optional, set the decimal places for float and double data to be stored in database
+  Firebase.setFloatDigits(2);
+  Firebase.setDoubleDigits(2);
+
+  
   //MQTT
-  String willPayload = "oh no!";
+  String willPayload = "Infinity crop!";
   bool willRetain = true;
   int willQos = 1;
 
@@ -88,7 +129,7 @@ void setup() {
   Serial.println(broker);
 
   if (!mqttClient.connect(broker, port)) {
-    Serial.print("La conexion a fallado! Error code = ");
+    Serial.print("La conexión a fallado! Error code = ");
     Serial.println(mqttClient.connectError());
 
     while (1);
@@ -100,9 +141,7 @@ void setup() {
   // set the message receive callback
   mqttClient.onMessage(onMqttMessage);
 
-  Serial.print("Suscribiendote al topic: ");
-  Serial.println(datosTopic);
-  Serial.println();
+
 
   // subscribe to a topic
   // the second parameter set's the QoS of the subscription,
@@ -115,15 +154,10 @@ void setup() {
 
 void loop() {
 
-  bool retained = false;
-  
-  int qos = 1;
-  bool dup = false;
-  String payload = "i7oLSgyX0kx6c75oMKBP";
-  String payload1 = "i7oLSgyX0kx6c75oMKBP";
-  String payload2 = "i7oLSgyX0kx6c75oMKBP";
   mqttClient.poll();
-   
+
+
+  //Mediciones de los sensores
   int16_t humedad = sh.tomarLectura();
   int16_t luminosidad = sl.tomarLectura();
   
@@ -134,7 +168,7 @@ void loop() {
   float temperaturaAmbiente = leerTemperaturaAmbiente();
   float temperaturaAmbienteN1 = leerTemperaturaAmbienteN1();
   float mediaTemperaturaAmbiente = calcularMedia(temperaturaAmbiente,temperaturaAmbienteN1);
-
+  
   int distanciaLeida = spres.distancia();
   
 
@@ -188,41 +222,34 @@ void loop() {
               Serial.println(distanciaLeida);
               Serial.println(" ");
               Serial.println(" ");
-              
-              payload += "-";
-              payload += String(humedad);
-              payload += "-";
-              payload += String(luminosidad);
-              payload += "-";
-              payload += String(mediaHumedadaAmbiente,2);
-              payload += "-";
-              payload += String(mediaTemperaturaAmbiente,2);
-              
-              
-              
-              payload1 += "-";
-              payload1 += String(humedadAmbienteN1,2);
-              payload1 += "-";
-              payload1 += String(temperaturaAmbienteN1,2);
 
-              payload2 += "-";
-              payload2 += String(humedadAmbiente,2);              
-              payload2 += "-";
-              payload2 += String(temperaturaAmbiente,2);
-              
-              mqttClient.beginMessage(datosTopic, payload.length(), retained, qos, dup);
-              mqttClient.print(payload);
-              mqttClient.endMessage();
 
-              mqttClient.beginMessage(datosTopic1, payload1.length(), retained, qos, dup);
-              mqttClient.print(payload1);
-              mqttClient.endMessage();
 
-              mqttClient.beginMessage(datosTopic2, payload2.length(), retained, qos, dup);
-              mqttClient.print(payload2);
-              mqttClient.endMessage();
-              
-              delay(2500);
+    Firebase.setDouble(fbdo, pathG + machineID+"/MediaHumedad", mediaHumedadaAmbiente);
+    Firebase.setDouble(fbdo, pathG + machineID+"/MediaTemperatura", mediaTemperaturaAmbiente);
+    Firebase.setDouble(fbdo, pathG + machineID+"/Luminosidad", luminosidad);
+    Firebase.setDouble(fbdo, pathG + machineID+"/LuzTecho", digitalRead(lucesTapa.getPinActuador()));
+    Firebase.setDouble(fbdo, pathG + machineID+"/LuzPuerta", digitalRead(lucesPuerta.getPinActuador()));
+    Firebase.setDouble(fbdo, pathG + machineID+"/LuzPieza1", digitalRead(luzP1.getPinActuador()));
+    Firebase.setDouble(fbdo, pathG + machineID+"/LuzPieza2", digitalRead(luzP2.getPinActuador()));
+    Firebase.setDouble(fbdo, pathG + machineID+"/LuzPieza3", digitalRead(luzP3.getPinActuador()));
+
+  
+    Firebase.setDouble(fbdo, path1 + machineID+"/Humedad", humedad);
+    Firebase.setDouble(fbdo, path1 + machineID+"/HumedadAmbiente", humedadAmbienteN1);
+    Firebase.setDouble(fbdo, path1 + machineID+"/TemperaturaAmbiente", temperaturaAmbienteN1);
+    Firebase.setDouble(fbdo, path1 + machineID+"/Presencia1", 0);
+    Firebase.setDouble(fbdo, path1 + machineID+"/Presencia2", 0);
+    Firebase.setDouble(fbdo, path1 + machineID+"/Presencia3", 0);
+
+  
+    Firebase.setDouble(fbdo, path2 + machineID+"/HumedadAmbiente", humedadAmbiente);
+    Firebase.setDouble(fbdo, path2 + machineID+"/TemperaturaAmbiente", temperaturaAmbiente);
+    Firebase.setDouble(fbdo, path2 + machineID+"/Presencia1", spres.hayPresencia());
+    Firebase.setDouble(fbdo, path2 + machineID+"/Presencia2", 0);
+    Firebase.setDouble(fbdo, path2 + machineID+"/Presencia3", 0);
+
+     delay(2500);
             
 
             
@@ -293,7 +320,10 @@ void onMqttMessage(int messageSize) {
   String valorOperacion = "";
   int nOperacion = 0;
 
-  
+  /*Modo debug MQTT*/
+  String payload = "";
+ /* mqttClient.poll();*/
+
   // we received a message, print out the topic and contents
   Serial.print("Received a message with topic '");
   Serial.print(mqttClient.messageTopic());
@@ -311,73 +341,128 @@ void onMqttMessage(int messageSize) {
   while (mqttClient.available()) {
     mensajeLeido += (char)mqttClient.read();
   }
+
+  mensajeLeido.toCharArray(buf, sizeof(buf));
+  char *p = buf;
+  char *str;
   
-  //Serial.println(mensajeLeido);
-  
-    mensajeLeido.toCharArray(buf, sizeof(buf));
-    char *p = buf;
-    char *str;
-    while ((str = strtok_r(p, "-", &p)) != NULL) // delimiter is the semicolon
+  while ((str = strtok_r(p, "-", &p)) != NULL) // delimiter is the semicolon
       if(nOperacion == 0){
         operacion = atoi(str);
         nOperacion++;
       }else if(nOperacion == 1){
         valorOperacion = str;
       }
-      
   
-
-  switch (operacion)  {
+   Serial.println("Mensaje recibido: ");
+   Serial.print(mensajeLeido);
+    switch (operacion)  {
     case 1:
-            Serial.println("Operar con las luces de la parte superior");
+            Serial.println("Operar con todas las luces");
+            payload += " "+mensajeLeido+" ";
              if(valorOperacion == "OFF"){
-              Serial.print("Apagando luces de la parte superior...");
+              Serial.print("Apagando todas luces...");
               lucesTapa.cambiarEstadoActuador(true);
+              lucesPuerta.cambiarEstadoActuador(true);
+              luzP1.cambiarEstadoActuador(true);
+              luzP2.cambiarEstadoActuador(true);
+              luzP3.cambiarEstadoActuador(true);
+              payload += "DENTRO LUCES GENERAL OFF";
               
             }else if(valorOperacion == "ON"){
-              Serial.print("Encendiendo luces de la parte superior...");
-              lucesTapa.cambiarEstadoActuador(false); 
+              Serial.print("Encendiendo todas las luces ...");
+              lucesTapa.cambiarEstadoActuador(false);
+              lucesPuerta.cambiarEstadoActuador(false);
+              luzP1.cambiarEstadoActuador(false);
+              luzP2.cambiarEstadoActuador(false);
+              luzP3.cambiarEstadoActuador(false);
+              payload += "DENTRO LUCES GENERAL ON"; 
             }
         break;
 
     case 2:
-          Serial.println("Operar con las luces de una de las puertas");
+          Serial.println("Operar con las luces del nivel 2");
+          payload += " "+mensajeLeido+" ";
            if(valorOperacion == "ON"){
-            Serial.print("Encendiendo luces de la puerta...");
-            lucesPuerta.cambiarEstadoActuador(true); 
+            Serial.print("Encendiendo luces del nivel 2...");
+            lucesTapa.cambiarEstadoActuador(false);
+            luzP1.cambiarEstadoActuador(false);
+            luzP2.cambiarEstadoActuador(false);
+            payload += "DENTRO LUCES NIVEL 2 ON"; 
           }else if(valorOperacion == "OFF"){
-            Serial.print("Apagando luces de la puerta...");
-            lucesPuerta.cambiarEstadoActuador(false);  
+            Serial.print("Apagando luces del nivel 2...");
+            lucesTapa.cambiarEstadoActuador(true);
+            luzP1.cambiarEstadoActuador(true);
+            luzP2.cambiarEstadoActuador(true);  
+            payload += "DENTRO LUCES NIVEL 2 OFF";
+          }
+        break;
+
+   case 3:
+          Serial.println("Operar con las luces del nivel 1");
+          payload += " "+mensajeLeido+" ";
+           if(valorOperacion == "ON"){
+            Serial.print("Encendiendo luces del nivel 1...");
+            lucesPuerta.cambiarEstadoActuador(false);
+            luzP3.cambiarEstadoActuador(false);
+            payload += "DENTRO LUCES NIVEL 1 ON"; 
+          }else if(valorOperacion == "OFF"){
+            Serial.print("Apagando luces del nivel 1...");
+            lucesPuerta.cambiarEstadoActuador(true);
+            luzP3.cambiarEstadoActuador(true);  
+            payload += "DENTRO LUCES NIVEL 1 OFF";
           }
         break;
         
-      case 3:
-          Serial.println("Operar cambiando el humbral de temperatura a la que se activan los ventiladores");
-           sht.setHumbralAlerta(valorOperacion.toFloat());
-           Serial.println(sht.getHumbralAlerta());
+      case 4:
+          Serial.println("Operar cambiando el humbral de humedad a la que se activan la electrovalvula");
+          payload += " "+mensajeLeido+" ";
+          sh.setHumbralAlerta(valorOperacion.toFloat());
+          Serial.println(sh.getHumbralAlerta());
+          payload += "DENTRO EDITAR HUMBRAL HUMEDAD";
         break;
+        
+     case 5:
+          Serial.println("Operar cambiando el humbral de temperatura a la que se activan los ventiladores");
+          payload += " "+mensajeLeido+" ";
+          sht.setHumbralAlerta(valorOperacion.toFloat());
+          shtnv1.setHumbralAlerta(valorOperacion.toFloat());
+          Serial.println(sht.getHumbralAlerta());
+          Serial.println(shtnv1.getHumbralAlerta());
+          payload += "DENTRO EDITAR HUMBRAL TEMPERATURA";
+        break;
+        
     default:
         Serial.println("Operación desconocida");
+        payload += "OPERACIÓN DESCONOCIDA";
+        break;
   }
 
-  /*if(mensajeLeido == "Superior OFF"){
-    Serial.print("Apagando luces de la parte superior...");
-    lucesTapa.cambiarEstadoActuador(true);
-    
-  }else if(mensajeLeido == "Superior ON"){
-    Serial.print("Encendiendo luces de la parte superior...");
-    lucesTapa.cambiarEstadoActuador(false); 
-  }else if(mensajeLeido == "ON"){
-    Serial.print("Encendiendo luces de la puerta...");
-    lucesPuerta.cambiarEstadoActuador(true); 
-  }else if(mensajeLeido == "OFF"){
-    Serial.print("Apagando luces de la puerta...");
-    lucesPuerta.cambiarEstadoActuador(false);
-    
-  }*/
+  mqttClient.beginMessage(debugtopic, payload.length(), false, 1, false);
+  mqttClient.print(payload);
+  mqttClient.endMessage();
   
   Serial.println();
   Serial.println();
 
 
+}
+
+void printResult(FirebaseData &data)
+{
+
+  if (data.dataType() == "int")
+    Serial.println(data.intData());
+  else if (data.dataType() == "float")
+    Serial.println(data.floatData(), 5);
+  else if (data.dataType() == "double")
+    printf("%.9lf\n", data.doubleData());
+  else if (data.dataType() == "boolean")
+    Serial.println(data.boolData() == 1 ? "true" : "false");
+  else if (data.dataType() == "string")
+    Serial.println(data.stringData());
+  else
+  {
+    Serial.println(data.payload());
+  }
 }

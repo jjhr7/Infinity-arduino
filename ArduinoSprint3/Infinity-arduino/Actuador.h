@@ -27,8 +27,10 @@ class  Actuador
 
             if(estadoActuador){
               digitalWrite(pinActuador, HIGH);
+              Serial.println("Estoy dentro cabio 1...");
             }else{
               digitalWrite(pinActuador, LOW);
+              Serial.println("Estoy dentro cambio 2...");
             }
          }
 } ;
