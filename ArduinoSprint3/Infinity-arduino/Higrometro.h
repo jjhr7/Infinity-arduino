@@ -76,7 +76,7 @@ class Higrometro : public Sensor
 
           void comprobarHumedad(int16_t humedad){
 
-            if(humedad>humbralAlerta){
+            if(humedad<humbralAlerta){
               digitalWrite(pinActuador, HIGH);
             }else{
               digitalWrite(pinActuador, LOW);

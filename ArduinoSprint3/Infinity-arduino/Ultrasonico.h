@@ -8,7 +8,7 @@ class Ultrasonico
           Ultrasonico() {
              pinEcho = 17;
              triggerPin = 16;
-             disTanciaPresencia = 37;
+             disTanciaPresencia = 21;
           }
           
           Ultrasonico(int pinEchoP, int triggerPinP, double disTanciaPresenciaP){
@@ -56,9 +56,9 @@ class Ultrasonico
       boolean hayPresencia(){
         int distanciaLeida = distancia();
         if(distanciaLeida < disTanciaPresencia){
-            return false;
+            return true;
           }else{
-           return true;  
+           return false;  
           }
         
         }

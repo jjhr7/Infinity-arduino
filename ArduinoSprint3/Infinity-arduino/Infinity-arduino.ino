@@ -18,10 +18,10 @@
 //Configuración wifi
 /*char ssid[] = "MiFibra-397F";        // your network SSID (name)
 char pass[] = "oXr6gkNe";    // your network password (use for WPA, or use as key for WEP)*/
-/*char ssid[] = "GUCCI NOTE";        // your network SSID (name)
-char pass[] = "12345678";    // your network password (use for WPA, or use as key for WEP)*/
-char ssid[] = "GTI-2020-2A-2-2";        // your network SSID (name)
-char pass[] = "58912485";    // your network password (use for WPA, or use as key for WEP)
+char ssid[] = "GUCCI Note";        // your network SSID (name)
+char pass[] = "12345678";    // your network password (use for WPA, or use as key for WEP)
+/*char ssid[] = "GTI-2020-2A-2-2";        // your network SSID (name)
+char pass[] = "58912485";    // your network password (use for WPA, or use as key for WEP)*/
 
 //Define FirebaseESP32 data object and variables
 FirebaseData fbdo;
@@ -38,8 +38,8 @@ String path2 = "/Mediciones nivel 2";
 const char broker[]    = "broker.hivemq.com";
 int        port        = 1883;
 const char willTopic[] = "infinity/senyal/will";
-const char operacionesTopic[]   = "infinity/senyal/operaciones";
-const char debugtopic[]  = "infinity/senyal/debug";
+const char operacionesTopic[]   = "infinity/senyal/operaciones-infinitycrop18012021";
+const char debugtopic[]  = "infinity/senyal/debug-infinitycrop18012021";
 
 //PinActuadores
 int pinActuadorLucesTapa = 12;
@@ -342,108 +342,108 @@ void onMqttMessage(int messageSize) {
     mensajeLeido += (char)mqttClient.read();
   }
 
-  mensajeLeido.toCharArray(buf, sizeof(buf));
-  char *p = buf;
-  char *str;
-  
-  while ((str = strtok_r(p, "-", &p)) != NULL) // delimiter is the semicolon
-      if(nOperacion == 0){
-        operacion = atoi(str);
-        nOperacion++;
-      }else if(nOperacion == 1){
-        valorOperacion = str;
+      mensajeLeido.toCharArray(buf, sizeof(buf));
+      char *p = buf;
+      char *str;
+      
+      while ((str = strtok_r(p, "-", &p)) != NULL) // delimiter is the semicolon
+          if(nOperacion == 0){
+            operacion = atoi(str);
+            nOperacion++;
+          }else if(nOperacion == 1){
+            valorOperacion = str;
+          }
+      
+       Serial.println("Mensaje recibido: ");
+       Serial.print(mensajeLeido);
+        switch (operacion)  {
+        case 1:
+                Serial.println("Operar con todas las luces");
+                payload += " "+mensajeLeido+" ";
+                 if(valorOperacion == "OFF"){
+                  Serial.print("Apagando todas luces...");
+                  lucesTapa.cambiarEstadoActuador(true);
+                  lucesPuerta.cambiarEstadoActuador(true);
+                  luzP1.cambiarEstadoActuador(true);
+                  luzP2.cambiarEstadoActuador(true);
+                  luzP3.cambiarEstadoActuador(true);
+                  payload += "DENTRO LUCES GENERAL OFF";
+                  
+                }else if(valorOperacion == "ON"){
+                  Serial.print("Encendiendo todas las luces ...");
+                  lucesTapa.cambiarEstadoActuador(false);
+                  lucesPuerta.cambiarEstadoActuador(false);
+                  luzP1.cambiarEstadoActuador(false);
+                  luzP2.cambiarEstadoActuador(false);
+                  luzP3.cambiarEstadoActuador(false);
+                  payload += "DENTRO LUCES GENERAL ON"; 
+                }
+            break;
+    
+        case 2:
+              Serial.println("Operar con las luces del nivel 2");
+              payload += " "+mensajeLeido+" ";
+               if(valorOperacion == "ON"){
+                Serial.print("Encendiendo luces del nivel 2...");
+                lucesTapa.cambiarEstadoActuador(false);
+                luzP1.cambiarEstadoActuador(false);
+                luzP2.cambiarEstadoActuador(false);
+                payload += "DENTRO LUCES NIVEL 2 ON"; 
+              }else if(valorOperacion == "OFF"){
+                Serial.print("Apagando luces del nivel 2...");
+                lucesTapa.cambiarEstadoActuador(true);
+                luzP1.cambiarEstadoActuador(true);
+                luzP2.cambiarEstadoActuador(true);  
+                payload += "DENTRO LUCES NIVEL 2 OFF";
+              }
+            break;
+    
+       case 3:
+              Serial.println("Operar con las luces del nivel 1");
+              payload += " "+mensajeLeido+" ";
+               if(valorOperacion == "ON"){
+                Serial.print("Encendiendo luces del nivel 1...");
+                lucesPuerta.cambiarEstadoActuador(false);
+                luzP3.cambiarEstadoActuador(false);
+                payload += "DENTRO LUCES NIVEL 1 ON"; 
+              }else if(valorOperacion == "OFF"){
+                Serial.print("Apagando luces del nivel 1...");
+                lucesPuerta.cambiarEstadoActuador(true);
+                luzP3.cambiarEstadoActuador(true);  
+                payload += "DENTRO LUCES NIVEL 1 OFF";
+              }
+            break;
+            
+          case 4:
+              Serial.println("Operar cambiando el humbral de humedad a la que se activan la electrovalvula");
+              payload += " "+mensajeLeido+" ";
+              sh.setHumbralAlerta(valorOperacion.toFloat());
+              Serial.println(sh.getHumbralAlerta());
+              payload += "DENTRO EDITAR HUMBRAL HUMEDAD";
+            break;
+            
+         case 5:
+              Serial.println("Operar cambiando el humbral de temperatura a la que se activan los ventiladores");
+              payload += " "+mensajeLeido+" ";
+              sht.setHumbralAlerta(valorOperacion.toFloat());
+              shtnv1.setHumbralAlerta(valorOperacion.toFloat());
+              Serial.println(sht.getHumbralAlerta());
+              Serial.println(shtnv1.getHumbralAlerta());
+              payload += "DENTRO EDITAR HUMBRAL TEMPERATURA";
+            break;
+            
+        default:
+            Serial.println("Operación desconocida");
+            payload += "OPERACIÓN DESCONOCIDA";
+            break;
       }
-  
-   Serial.println("Mensaje recibido: ");
-   Serial.print(mensajeLeido);
-    switch (operacion)  {
-    case 1:
-            Serial.println("Operar con todas las luces");
-            payload += " "+mensajeLeido+" ";
-             if(valorOperacion == "OFF"){
-              Serial.print("Apagando todas luces...");
-              lucesTapa.cambiarEstadoActuador(true);
-              lucesPuerta.cambiarEstadoActuador(true);
-              luzP1.cambiarEstadoActuador(true);
-              luzP2.cambiarEstadoActuador(true);
-              luzP3.cambiarEstadoActuador(true);
-              payload += "DENTRO LUCES GENERAL OFF";
-              
-            }else if(valorOperacion == "ON"){
-              Serial.print("Encendiendo todas las luces ...");
-              lucesTapa.cambiarEstadoActuador(false);
-              lucesPuerta.cambiarEstadoActuador(false);
-              luzP1.cambiarEstadoActuador(false);
-              luzP2.cambiarEstadoActuador(false);
-              luzP3.cambiarEstadoActuador(false);
-              payload += "DENTRO LUCES GENERAL ON"; 
-            }
-        break;
-
-    case 2:
-          Serial.println("Operar con las luces del nivel 2");
-          payload += " "+mensajeLeido+" ";
-           if(valorOperacion == "ON"){
-            Serial.print("Encendiendo luces del nivel 2...");
-            lucesTapa.cambiarEstadoActuador(false);
-            luzP1.cambiarEstadoActuador(false);
-            luzP2.cambiarEstadoActuador(false);
-            payload += "DENTRO LUCES NIVEL 2 ON"; 
-          }else if(valorOperacion == "OFF"){
-            Serial.print("Apagando luces del nivel 2...");
-            lucesTapa.cambiarEstadoActuador(true);
-            luzP1.cambiarEstadoActuador(true);
-            luzP2.cambiarEstadoActuador(true);  
-            payload += "DENTRO LUCES NIVEL 2 OFF";
-          }
-        break;
-
-   case 3:
-          Serial.println("Operar con las luces del nivel 1");
-          payload += " "+mensajeLeido+" ";
-           if(valorOperacion == "ON"){
-            Serial.print("Encendiendo luces del nivel 1...");
-            lucesPuerta.cambiarEstadoActuador(false);
-            luzP3.cambiarEstadoActuador(false);
-            payload += "DENTRO LUCES NIVEL 1 ON"; 
-          }else if(valorOperacion == "OFF"){
-            Serial.print("Apagando luces del nivel 1...");
-            lucesPuerta.cambiarEstadoActuador(true);
-            luzP3.cambiarEstadoActuador(true);  
-            payload += "DENTRO LUCES NIVEL 1 OFF";
-          }
-        break;
-        
-      case 4:
-          Serial.println("Operar cambiando el humbral de humedad a la que se activan la electrovalvula");
-          payload += " "+mensajeLeido+" ";
-          sh.setHumbralAlerta(valorOperacion.toFloat());
-          Serial.println(sh.getHumbralAlerta());
-          payload += "DENTRO EDITAR HUMBRAL HUMEDAD";
-        break;
-        
-     case 5:
-          Serial.println("Operar cambiando el humbral de temperatura a la que se activan los ventiladores");
-          payload += " "+mensajeLeido+" ";
-          sht.setHumbralAlerta(valorOperacion.toFloat());
-          shtnv1.setHumbralAlerta(valorOperacion.toFloat());
-          Serial.println(sht.getHumbralAlerta());
-          Serial.println(shtnv1.getHumbralAlerta());
-          payload += "DENTRO EDITAR HUMBRAL TEMPERATURA";
-        break;
-        
-    default:
-        Serial.println("Operación desconocida");
-        payload += "OPERACIÓN DESCONOCIDA";
-        break;
-  }
-
-  mqttClient.beginMessage(debugtopic, payload.length(), false, 1, false);
-  mqttClient.print(payload);
-  mqttClient.endMessage();
-  
-  Serial.println();
-  Serial.println();
+    
+      mqttClient.beginMessage(debugtopic, payload.length(), false, 1, false);
+      mqttClient.print(payload);
+      mqttClient.endMessage();
+      
+      Serial.println();
+      Serial.println();
 
 
 }
