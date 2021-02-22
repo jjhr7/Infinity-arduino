@@ -23,6 +23,9 @@ char pass[] = "12345678";    // your network password (use for WPA, or use as ke
 /*char ssid[] = "GTI-2020-2A-2-2";        // your network SSID (name)
 char pass[] = "58912485";    // your network password (use for WPA, or use as key for WEP)*/
 
+/*char ssid[] = "vodafoneE840";        // your network SSID (name)
+char pass[] = "AWS6ZBB2NHSM6S";    // your network password (use for WPA, or use as key for WEP)*/
+
 //Define FirebaseESP32 data object and variables
 FirebaseData fbdo;
 

@@ -82,6 +82,7 @@ class Higrometro : public Sensor
               digitalWrite(pinActuador, LOW);
             }
          }
+         
           void actuarBombaDeRiego(boolean actuadorBomba){
 
             if(actuadorBomba){
