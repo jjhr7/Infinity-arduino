@@ -5,9 +5,9 @@ class  SDHT : public Sensor
      public: 
           //Constructores
           SDHT()
-          : Sensor(25){
+          : Sensor(33){
              pinActuador = 26;
-             humbralAlerta = 16.00;
+             humbralAlerta = 20.00;
           }
           
           SDHT( int pinActuadorP, int pinLecturaP, int humbralAlertaP)

@@ -9,8 +9,8 @@ class Higrometro : public Sensor
           //Constructores
           Higrometro() 
           : Sensor(34){
-             valorSeco = 4096;
-             valorHumedo = 1182;
+             valorSeco = 4095;
+             valorHumedo = 1074;
              pinActuador = 27;
              voltajeHumedadLeido = 0;
              humbralAlerta = 30;

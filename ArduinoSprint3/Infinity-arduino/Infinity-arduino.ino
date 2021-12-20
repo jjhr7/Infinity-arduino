@@ -10,26 +10,27 @@
 #include <FirebaseESP32.h>
 
 #define DHTTYPE DHT22
-#define DHTTYPE11 DHT11
+//#define DHTTYPE11 DHT11
 
-#define FIREBASE_HOST "https://infinity-crop-cc8b9.firebaseio.com"
-#define FIREBASE_AUTH "rnkvZtImIx3hSjM915QwP7Yr5lJbQlWYwuAE53Zk"
+#define FIREBASE_HOST "https://infinity-crop-9bbad-default-rtdb.europe-west1.firebasedatabase.app/"
+#define FIREBASE_AUTH "zr5FlOJWIKDXOVtK2exptbuebdNADkVUcaerkB6P"
 
 //Configuración wifi
-/*char ssid[] = "MiFibra-397F";        // your network SSID (name)
-char pass[] = "oXr6gkNe";    // your network password (use for WPA, or use as key for WEP)*/
-char ssid[] = "GUCCI Note";        // your network SSID (name)
-char pass[] = "12345678";    // your network password (use for WPA, or use as key for WEP)
+char ssid[] = "MiFibra-397F";        // your network SSID (name)
+char pass[] = "oXr6gkNe";  // your network password (use for WPA, or use as key for WEP)
+//char ssid[] = "GUCCI Note";        // your network SSID (name)
+//char pass[] = "123456789";    // your network password (use for WPA, or use as key for WEP)
 /*char ssid[] = "GTI-2020-2A-2-2";        // your network SSID (name)
 char pass[] = "58912485";    // your network password (use for WPA, or use as key for WEP)*/
 
 /*char ssid[] = "vodafoneE840";        // your network SSID (name)
 char pass[] = "AWS6ZBB2NHSM6S";    // your network password (use for WPA, or use as key for WEP)*/
 
+/*char ssid[] = "JHR7";        // your network SSID (name)
+char pass[] = "dengue123";    // your network password (use for WPA, or use as key for WEP)*/
+
 //Define FirebaseESP32 data object and variables
 FirebaseData fbdo;
-
-
 
 String machineID = "/infinitycrop18012021";
 String pathG = "/Mediciones general";
@@ -41,21 +42,21 @@ String path2 = "/Mediciones nivel 2";
 const char broker[]    = "broker.hivemq.com";
 int        port        = 1883;
 const char willTopic[] = "infinity/senyal/will";
-const char operacionesTopic[]   = "infinity/senyal/operaciones-infinitycrop18012021";
-const char debugtopic[]  = "infinity/senyal/debug-infinitycrop18012021";
+const char operacionesTopic[]   = "infinity/senyal/operaciones-hTmnsI1gp5CtcTtD2gMd";
+const char debugtopic[]  = "infinity/senyal/debug-hTmnsI1gp5CtcTtD2gMd";
 
 //PinActuadores
-int pinActuadorLucesTapa = 12;
-int pinActuadorLucesPuerta = 13;
-int pinActuadorLuzP1 = 14;
-int pinActuadorLuzP2 = 22;
+int pinActuadorLucesTapa = 2;
+int pinActuadorLucesPuerta = 15;
+int pinActuadorLuzP1 = 0;
+int pinActuadorLuzP2 = 4;
 int pinActuadorLuzP3 = 23;
 
 //Declaración objetos
 Higrometro sh;
 FotoResistencia sl;
 SDHT sht;
-SDHT shtnv1(0,33,16);
+SDHT shtnv1(26,13,20);
 Ultrasonico spres;
 
 Actuador lucesTapa(pinActuadorLucesTapa);
@@ -65,8 +66,8 @@ Actuador luzP1(pinActuadorLuzP1);
 Actuador luzP2(pinActuadorLuzP2);
 Actuador luzP3(pinActuadorLuzP3);
 
-DHT dht(sht.getPinLectura(), DHTTYPE);
-DHT dhtnv1(shtnv1.getPinLectura(),DHTTYPE11);
+DHT dht(sht.getPinLectura(), DHT22);
+DHT dhtnv1(shtnv1.getPinLectura(),DHT22);
 WiFiClient wifiClient;
 MqttClient mqttClient(wifiClient);
 
@@ -95,11 +96,13 @@ void setup() {
   Serial.print("Intentando conectar a la red con el SSID: ");
   Serial.println(ssid);
   
-  while (WiFi.begin(ssid, pass) != WL_CONNECTED) {
-      // failed, retry
-      Serial.print(".");
-      delay(2000);
-  }
+  WiFi.begin(ssid, pass);
+
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+
     
   Serial.println("You're connected to the network");
   Serial.println();
@@ -152,12 +155,11 @@ void setup() {
   int subscribeQos = 1;
 
   mqttClient.subscribe(operacionesTopic, subscribeQos);
-  
 }
 
 void loop() {
 
-  mqttClient.poll();
+  //mqttClient.poll();
 
 
   //Mediciones de los sensores
@@ -252,7 +254,7 @@ void loop() {
     Firebase.setDouble(fbdo, path2 + machineID+"/Presencia2", 0);
     Firebase.setDouble(fbdo, path2 + machineID+"/Presencia3", 0);
 
-     delay(2500);
+     delay(1500);
             
 
             
@@ -325,7 +327,7 @@ void onMqttMessage(int messageSize) {
 
   /*Modo debug MQTT*/
   String payload = "";
- /* mqttClient.poll();*/
+  mqttClient.poll();
 
   // we received a message, print out the topic and contents
   Serial.print("Received a message with topic '");
@@ -359,6 +361,7 @@ void onMqttMessage(int messageSize) {
       
        Serial.println("Mensaje recibido: ");
        Serial.print(mensajeLeido);
+       Serial.print(operacion);
         switch (operacion)  {
         case 1:
                 Serial.println("Operar con todas las luces");
