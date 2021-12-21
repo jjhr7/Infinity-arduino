@@ -159,7 +159,7 @@ void setup() {
 
 void loop() {
 
-  //mqttClient.poll();
+  mqttClient.poll();
 
 
   //Mediciones de los sensores
@@ -327,7 +327,7 @@ void onMqttMessage(int messageSize) {
 
   /*Modo debug MQTT*/
   String payload = "";
-  mqttClient.poll();
+  /*mqttClient.poll();*/
 
   // we received a message, print out the topic and contents
   Serial.print("Received a message with topic '");
