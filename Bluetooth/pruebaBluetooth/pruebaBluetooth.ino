@@ -47,6 +47,7 @@ void loop() {
     }
    
   Serial.write(ssid);
+    
   
   if (!String(ssid).equals("")) {
     for (int i = 0; i < 50; i++)
@@ -57,6 +58,12 @@ void loop() {
         pass[indice2] = SerialBT.read();
         indice2++; 
       }  
+
+
+        for (int i = 0; i < 50; i++)
+        {
+            SerialBT.write(ssid[i]);
+        }
       Serial.write(pass);
   }
   if(!String(ssid).equals("")&&!String(pass).equals("")){
