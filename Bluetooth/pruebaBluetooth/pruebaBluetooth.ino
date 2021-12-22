@@ -17,7 +17,7 @@ WiFiClient wifiClient;
 int eeSSID = 0;
 int eePassword = 1;
 char ssid[50] = "";
-char pass[50] = ""; 
+char pass[50] = "";
 int indice = 0;
 int indice2 = 0;
 const char msg[50] = "Introduce el ssid de tu red";
@@ -33,60 +33,65 @@ void setup() {
 }
 
 void loop() {
-  if(String(ssid).equals("")){
+
+  
+  if (String(ssid).equals("")) {
 
     for (int i = 0; i < 50; i++)
-        {
-            SerialBT.write(msg[i]);
-        }
-    
-      while (SerialBT.available()) {
-        ssid[indice] = SerialBT.read();
-        indice++; 
-      }
+    {
+      SerialBT.write(msg[i]);
     }
-   
+
+    while (SerialBT.available()) {
+      ssid[indice] = SerialBT.read();
+      indice++;
+    }
+  }
+
   Serial.write(ssid);
-    
-  
+
+
+
   if (!String(ssid).equals("")) {
     for (int i = 0; i < 50; i++)
-        {
-            SerialBT.write(msg2[i]);
-        }
-      while (SerialBT.available()) {
-        pass[indice2] = SerialBT.read();
-        indice2++; 
-      }  
-
-
-        for (int i = 0; i < 50; i++)
-        {
-            SerialBT.write(ssid[i]);
-        }
-      Serial.write(pass);
-  }
-  if(!String(ssid).equals("")&&!String(pass).equals("")){
-      Serial.print("Intentando conectar a la red con el SSID: ");
-      Serial.println(ssid);
-      Serial.println(pass);
-
-      
-      WiFi.begin(ssid, pass);
-
-      Serial.println(WiFi.status());
-      
-        while (WiFi.status() != WL_CONNECTED) {
-            delay(500);
-            Serial.print(".");
-           
-        }
-       
-    
-        
-     Serial.println("You're connected to the network");
-     Serial.println();
+    {
+      SerialBT.write(msg2[i]);
     }
+    while (SerialBT.available()) {
+      pass[indice2] = SerialBT.read();
+      indice2++;
+    }
+
+
+    for (int i = 0; i < 50; i++)
+    {
+      SerialBT.write(ssid[i]);
+    }
+    Serial.write(pass);
+  }
+
   
+  if (!String(ssid).equals("") && !String(pass).equals("")) {
+    Serial.print("Intentando conectar a la red con el SSID: ");
+    Serial.println(ssid);
+    Serial.println(pass);
+
+
+    WiFi.begin(ssid, pass);
+
+    Serial.println(WiFi.status());
+
+    while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+
+    }
+
+
+
+    Serial.println("You're connected to the network");
+    Serial.println();
+  }
+
   delay(5000);
 }
