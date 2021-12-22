@@ -22,6 +22,7 @@ int indice = 0;
 int indice2 = 0;
 const char msg[50] = "Introduce el ssid de tu red";
 const char msg2[50] = "Introduce tu contrasenña";
+const char msg3[50] = "CONNECTED-OK";
 int nIntentos = 0;
 
 
@@ -87,7 +88,14 @@ void loop() {
 
     }
 
-
+  if(WiFi.status() == WL_CONNECTED){
+    for (int i = 0; i < 50; i++)
+    {
+      SerialBT.write(msg3[i]);
+      Serial.print("Connected");
+    }
+    
+    }
 
     Serial.println("You're connected to the network");
     Serial.println();

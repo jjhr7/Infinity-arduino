@@ -7,7 +7,7 @@ class  SDHT : public Sensor
           SDHT()
           : Sensor(33){
              pinActuador = 26;
-             humbralAlerta = 20.00;
+             humbralAlerta = 25.00;
           }
           
           SDHT( int pinActuadorP, int pinLecturaP, int humbralAlertaP)
@@ -39,9 +39,9 @@ class  SDHT : public Sensor
           void comprobarTemperatura(float temperatura){
 
             if(temperatura>humbralAlerta){
-              digitalWrite(pinActuador, HIGH);
-            }else{
               digitalWrite(pinActuador, LOW);
+            }else{
+              digitalWrite(pinActuador, HIGH);
             }
          }
 

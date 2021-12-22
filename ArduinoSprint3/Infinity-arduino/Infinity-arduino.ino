@@ -16,10 +16,10 @@
 #define FIREBASE_AUTH "zr5FlOJWIKDXOVtK2exptbuebdNADkVUcaerkB6P"
 
 //Configuración wifi
-char ssid[] = "MiFibra-397F";        // your network SSID (name)
-char pass[] = "oXr6gkNe";  // your network password (use for WPA, or use as key for WEP)
-//char ssid[] = "GUCCI Note";        // your network SSID (name)
-//char pass[] = "123456789";    // your network password (use for WPA, or use as key for WEP)
+//char ssid[] = "MiFibra-397F";        // your network SSID (name)
+//char pass[] = "oXr6gkNe";  // your network password (use for WPA, or use as key for WEP)
+char ssid[] = "GUCCI Note";        // your network SSID (name)
+char pass[] = "123456789";    // your network password (use for WPA, or use as key for WEP)
 /*char ssid[] = "GTI-2020-2A-2-2";        // your network SSID (name)
 char pass[] = "58912485";    // your network password (use for WPA, or use as key for WEP)*/
 
@@ -42,8 +42,8 @@ String path2 = "/Mediciones nivel 2";
 const char broker[]    = "broker.hivemq.com";
 int        port        = 1883;
 const char willTopic[] = "infinity/senyal/will";
-const char operacionesTopic[]   = "infinity/senyal/operaciones-hTmnsI1gp5CtcTtD2gMd";
-const char debugtopic[]  = "infinity/senyal/debug-hTmnsI1gp5CtcTtD2gMd";
+const char operacionesTopic[]   = "infinity/senyal/operaciones-IoHhsfTcc6kchTysTWtT";
+const char debugtopic[]  = "infinity/senyal/debug-IoHhsfTcc6kchTysTWtT";
 
 //PinActuadores
 int pinActuadorLucesTapa = 2;
@@ -56,7 +56,7 @@ int pinActuadorLuzP3 = 23;
 Higrometro sh;
 FotoResistencia sl;
 SDHT sht;
-SDHT shtnv1(26,13,20);
+SDHT shtnv1(26,13,25);
 Ultrasonico spres;
 
 Actuador lucesTapa(pinActuadorLucesTapa);
@@ -421,11 +421,16 @@ void onMqttMessage(int messageSize) {
             break;
             
           case 4:
-              Serial.println("Operar cambiando el humbral de humedad a la que se activan la electrovalvula");
+              Serial.println("Operar con la electrovalvula");
               payload += " "+mensajeLeido+" ";
-              sh.setHumbralAlerta(valorOperacion.toFloat());
-              Serial.println(sh.getHumbralAlerta());
-              payload += "DENTRO EDITAR HUMBRAL HUMEDAD";
+
+              if(valorOperacion == "ON"){
+                 payload += "DENTRO ATIVAR ELECTROVALVULA";
+                 sh.actuarBombaDeRiego(true);
+              }else{
+                payload += "DENTRO APAGAR ELECTROVALVULA";
+                 sh.actuarBombaDeRiego(false);
+              }
             break;
             
          case 5:
