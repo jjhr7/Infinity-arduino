@@ -18,8 +18,8 @@
 //Configuración wifi
 //char ssid[] = "MiFibra-397F";        // your network SSID (name)
 //char pass[] = "oXr6gkNe";  // your network password (use for WPA, or use as key for WEP)
-char ssid[] = "GUCCI Note";        // your network SSID (name)
-char pass[] = "123456789";    // your network password (use for WPA, or use as key for WEP)
+/*char ssid[] = "GUCCI Note";        // your network SSID (name)
+char pass[] = "123456789";    // your network password (use for WPA, or use as key for WEP)*/
 /*char ssid[] = "GTI-2020-2A-2-2";        // your network SSID (name)
 char pass[] = "58912485";    // your network password (use for WPA, or use as key for WEP)*/
 
@@ -29,21 +29,25 @@ char pass[] = "AWS6ZBB2NHSM6S";    // your network password (use for WPA, or use
 /*char ssid[] = "JHR7";        // your network SSID (name)
 char pass[] = "dengue123";    // your network password (use for WPA, or use as key for WEP)*/
 
+char ssid[] = "Redmi Note 10S";        // your network SSID (name)
+char pass[] = "hola123456789";    // your network password (use for WPA, or use as key for WEP)
+
 //Define FirebaseESP32 data object and variables
 FirebaseData fbdo;
 
-String machineID = "/infinitycrop18012021";
-String pathG = "/Mediciones general";
-String path1 = "/Mediciones nivel 1";
-String path2 = "/Mediciones nivel 2";
+String machineID = "/McJiDQybv0VSMhancDE7";
+String pathM = "/IC6 DUAL";
+String pathG = "/datos generales";
+String path1 = "/parte inferior";
+String path2 = "/parte superior";
 
 
 //Configuración MQTT
 const char broker[]    = "broker.hivemq.com";
 int        port        = 1883;
 const char willTopic[] = "infinity/senyal/will";
-const char operacionesTopic[]   = "infinity/senyal/operaciones-IoHhsfTcc6kchTysTWtT";
-const char debugtopic[]  = "infinity/senyal/debug-IoHhsfTcc6kchTysTWtT";
+const char operacionesTopic[]   = "infinity/senyal/operaciones-McJiDQybv0VSMhancDE7";
+const char debugtopic[]  = "infinity/senyal/debug-McJiDQybv0VSMhancDE7";
 
 //PinActuadores
 int pinActuadorLucesTapa = 2;
@@ -230,29 +234,23 @@ void loop() {
 
 
 
-    Firebase.setDouble(fbdo, pathG + machineID+"/MediaHumedad", mediaHumedadaAmbiente);
-    Firebase.setDouble(fbdo, pathG + machineID+"/MediaTemperatura", mediaTemperaturaAmbiente);
-    Firebase.setDouble(fbdo, pathG + machineID+"/Luminosidad", luminosidad);
-    Firebase.setDouble(fbdo, pathG + machineID+"/LuzTecho", digitalRead(lucesTapa.getPinActuador()));
-    Firebase.setDouble(fbdo, pathG + machineID+"/LuzPuerta", digitalRead(lucesPuerta.getPinActuador()));
-    Firebase.setDouble(fbdo, pathG + machineID+"/LuzPieza1", digitalRead(luzP1.getPinActuador()));
-    Firebase.setDouble(fbdo, pathG + machineID+"/LuzPieza2", digitalRead(luzP2.getPinActuador()));
-    Firebase.setDouble(fbdo, pathG + machineID+"/LuzPieza3", digitalRead(luzP3.getPinActuador()));
+    Firebase.setDouble(fbdo, pathM + machineID + pathG +"/humedad", mediaHumedadaAmbiente);
+    Firebase.setDouble(fbdo, pathM + machineID + pathG +"/temperatura", mediaTemperaturaAmbiente);
+    Firebase.setDouble(fbdo, pathM + machineID + pathG +"/luminosidad", luminosidad);
+    Firebase.setDouble(fbdo, pathM + machineID + pathG +"/deposito", humedad);
 
-  
-    Firebase.setDouble(fbdo, path1 + machineID+"/Humedad", humedad);
-    Firebase.setDouble(fbdo, path1 + machineID+"/HumedadAmbiente", humedadAmbienteN1);
-    Firebase.setDouble(fbdo, path1 + machineID+"/TemperaturaAmbiente", temperaturaAmbienteN1);
-    Firebase.setDouble(fbdo, path1 + machineID+"/Presencia1", 0);
-    Firebase.setDouble(fbdo, path1 + machineID+"/Presencia2", 0);
-    Firebase.setDouble(fbdo, path1 + machineID+"/Presencia3", 0);
 
-  
-    Firebase.setDouble(fbdo, path2 + machineID+"/HumedadAmbiente", humedadAmbiente);
-    Firebase.setDouble(fbdo, path2 + machineID+"/TemperaturaAmbiente", temperaturaAmbiente);
-    Firebase.setDouble(fbdo, path2 + machineID+"/Presencia1", spres.hayPresencia());
-    Firebase.setDouble(fbdo, path2 + machineID+"/Presencia2", 0);
-    Firebase.setDouble(fbdo, path2 + machineID+"/Presencia3", 0);
+    Firebase.setDouble(fbdo, pathM + machineID + path1 +"/humedad", humedadAmbienteN1);
+    Firebase.setDouble(fbdo, pathM + machineID + path1 +"/temperatura", temperaturaAmbienteN1);
+
+
+    Firebase.setDouble(fbdo, pathM + machineID + path2 +"/humedad", humedadAmbiente);
+    Firebase.setDouble(fbdo, pathM + machineID + path2 +"/temperatura", temperaturaAmbiente);
+    
+    Firebase.setDouble(fbdo, pathM + machineID  +"/state riego", 0);
+    Firebase.setDouble(fbdo, pathM + machineID  +"/state extraction", 0);
+
+
 
      delay(1500);
             
